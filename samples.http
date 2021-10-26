@@ -1,0 +1,13 @@
+### GET Dieter!
+
+GET http://localhost:3001/api/users/?name=dieter
+
+
+### GET all users
+
+GET http://localhost:3001/api/users/all
+
+
+### DELETE a user
+
+DELETE http://localhost:3001/api/users/?name=dieter
