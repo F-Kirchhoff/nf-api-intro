@@ -47,7 +47,7 @@ Post http://localhost:3001/api/login
 Content-Type: application/json
 
 {
-  "username": "RealJuliusCaesar",
+  "username": "Dietonator",
   "password": "1234"
 }
 
@@ -56,5 +56,5 @@ GET http://localhost:3001/api/me
 
 
 ### POST logout
-Post http://localhost:3001/api/logout
+GET http://localhost:3001/api/logout
 

@@ -12,16 +12,6 @@ interface Query {
   age?: number;
 }
 
-const model: {
-  currentUser: {
-    name: string;
-    age: number;
-    mail: string;
-  } | null;
-} = {
-  currentUser: null,
-};
-
 let users = [
   {
     _id: 0,
@@ -73,17 +63,25 @@ let users = [
   },
 ];
 
-app.post('/api/logout', (_req, res) => {
-  if (!model.currentUser) {
+app.get('/api/logout', (req, res) => {
+  if (!req.cookies.username) {
     res.send('Already logged out!');
   } else {
-    res.send(`Goodbye ${model.currentUser.name}`);
-    model.currentUser = null;
+    const username = req.cookies.username;
+    res.cookie('username', '');
+    console.log(req.cookies);
+    res.send(`Goodbye ${username}`);
   }
 });
 
-app.get('/api/me', (_req, res) => {
-  res.send(model.currentUser);
+app.get('/api/me', (req, res) => {
+  const cookies = req.cookies;
+  const currenUser = users.find((user) => user.username === cookies.username);
+  if (currenUser) {
+    res.send(currenUser);
+  } else {
+    res.status(404).send('Nobody is logged in!');
+  }
 });
 
 app.post('/api/login', (req, res) => {
@@ -95,12 +93,9 @@ app.post('/api/login', (req, res) => {
       user.password === userLogin.password
   );
   if (foundUser) {
-    model.currentUser = {
-      name: foundUser.name,
-      age: foundUser.age,
-      mail: foundUser.mail,
-    };
-    res.send(`Herzlich Willkommen ${foundUser.name}`);
+    res
+      .cookie('username', foundUser.username)
+      .send(`Herzlich Willkommen ${foundUser.name}`);
   } else {
     res.status(403).send('Ooops, wrong username or password.');
   }
