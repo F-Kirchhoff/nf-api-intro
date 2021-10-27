@@ -11,3 +11,16 @@ GET http://localhost:3001/api/users/all
 ### DELETE a user
 
 DELETE http://localhost:3001/api/users/?name=dieter
+
+
+### POST Create a user
+
+POST http://localhost:3001/api/users
+Content-Type: application/json
+
+{
+  "name": "Vonnegurt",
+  "nickname": "Schlachter Nr. 5",
+  "age": 0,
+  "mail": "anonymous@www.de"
+}

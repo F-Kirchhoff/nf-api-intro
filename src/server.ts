@@ -1,6 +1,7 @@
 import express from 'express';
 
 const app = express();
+app.use(express.json());
 const port = 3001;
 
 interface Query {
@@ -53,6 +54,21 @@ let users = [
     nickname: 'Forestdares',
   },
 ];
+app.post('/api/users/', (request, response) => {
+  // find matching users
+  const { name, nickname, age, mail } = request.body;
+  const newUser = {
+    _id: new Date().getTime(),
+    name,
+    nickname,
+    mail,
+    age,
+  };
+
+  users = [...users, newUser];
+
+  response.send(request.body);
+});
 
 app.delete('/api/users/', (request, response) => {
   // find matching users
