@@ -68,7 +68,7 @@ app.get('/api/logout', (req, res) => {
     res.send('Already logged out!');
   } else {
     const username = req.cookies.username;
-    res.cookie('username', '');
+    res.setHeader('Set-Cookie', `username=`);
     console.log(req.cookies);
     res.send(`Goodbye ${username}`);
   }
@@ -94,7 +94,7 @@ app.post('/api/login', (req, res) => {
   );
   if (foundUser) {
     res
-      .cookie('username', foundUser.username)
+      .setHeader('Set-Cookie', `username=${foundUser.username}`)
       .send(`Herzlich Willkommen ${foundUser.name}`);
   } else {
     res.status(403).send('Ooops, wrong username or password.');
