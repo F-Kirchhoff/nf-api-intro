@@ -15,6 +15,10 @@ app.use(express.json());
 app.use(cookieParser());
 const port = 3001;
 
+// ###########################################
+// users - login / logout route
+// ###########################################
+
 app.get('/api/logout', (req, res) => {
   if (!req.cookies.username) {
     res.send('Already logged out!');
@@ -25,7 +29,6 @@ app.get('/api/logout', (req, res) => {
   console.log(req.cookies);
   res.send(`Goodbye ${username}`);
 });
-
 app.get('/api/me', async (req, res) => {
   const { username } = req.cookies;
   const userCollection = getUserCollection();
@@ -38,7 +41,6 @@ app.get('/api/me', async (req, res) => {
     ? res.send(currentUser)
     : res.status(404).send('Nobody is logged in!');
 });
-
 app.post('/api/login', async (req, res) => {
   const { username, password } = req.body;
 
@@ -56,11 +58,15 @@ app.post('/api/login', async (req, res) => {
     : res.status(403).send('Ooops, wrong username or password.');
 });
 
-app.post('/api/users/', async (request, response) => {
-  const { name, username, age, mail, password } = request.body;
+// ###########################################
+// users - route
+// ###########################################
+
+app.post('/api/users/', async (req, res) => {
+  const { name, username, age, mail, password } = req.body;
 
   if (!(name && username && age && mail && password)) {
-    response.status(400).send('Insufficient data to create a user.');
+    res.status(400).send('Insufficient data to create a user.');
     return;
   }
   const userCollection = getUserCollection();
@@ -68,7 +74,7 @@ app.post('/api/users/', async (request, response) => {
   const foundUser = await userCollection.find({ username: username }).toArray();
 
   if (foundUser.length > 0) {
-    response.status(501).send('Username already in use.');
+    res.status(501).send('Username already in use.');
     return;
   }
 
@@ -80,21 +86,19 @@ app.post('/api/users/', async (request, response) => {
     password,
   };
 
-  userCollection.insertOne(newUser);
+  const msg = await userCollection.insertOne(newUser);
 
-  response.send(request.body);
+  res.send(msg);
 });
-
 app.delete('/api/users/', async (req, res) => {
   // find matching users
   const { username } = req.query;
 
   const userCollection = getUserCollection();
+  const msg = await userCollection.deleteOne({ username: username });
 
-  userCollection.deleteOne({ username: username });
-  res.send(`Success`);
+  res.send(msg);
 });
-
 app.get('/api/users/', async (req, res) => {
   // filter the users for all possible queries, if specified
   const { name, username, age } = req.query;
@@ -111,12 +115,17 @@ app.get('/api/users/', async (req, res) => {
     ? res.send(foundUsers)
     : res.status(404).send('No matching user found.');
 });
-app.get('/api/users/all', async (_request, response) => {
+
+// ###########################################
+// users - all route
+// ###########################################
+
+app.get('/api/users/all', async (_req, res) => {
   // filter the users for all possible queries, if specified
   const userCollection = getUserCollection();
 
   const allUsers = await userCollection.find().toArray();
-  response.send(allUsers);
+  res.send(allUsers);
 });
 app.get('/', (_req, res) => {
   res.send('Hello World!');
