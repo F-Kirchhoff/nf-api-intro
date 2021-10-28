@@ -1,6 +1,15 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
+import { connectDatabase, getUserCollection } from './utils/database';
 
+dotenv.config();
+
+if (!process.env.SUPER_SECRET_API_KEY || !process.env.SUPER_SECRET_DB_USER) {
+  throw new Error('.env file not populated');
+}
+
+// Implement Sever Routing
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
@@ -153,14 +162,24 @@ app.get('/api/users/', (request, response) => {
 });
 app.get('/api/users/all', (_request, response) => {
   // filter the users for all possible queries, if specified
+
+  console.log(mongoUsers);
   response.send(users);
 });
 app.get('/', (_req, res) => {
   res.send('Hello World!');
 });
 
-app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
+// ###########################################
+// start connection with database and start server
+// ###########################################
+
+connectDatabase(
+  `mongodb+srv://${process.env.SUPER_SECRET_DB_USER}:${process.env.SUPER_SECRET_API_KEY}@pier1.vjjm9.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
+).then(() => {
+  app.listen(port, () => {
+    console.log(`Example app listening at http://localhost:${port}`);
+  });
 });
 
 function filterUsers(query: Query) {
