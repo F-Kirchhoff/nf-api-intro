@@ -1,125 +1,78 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
+import dotenv from 'dotenv';
+import { connectDatabase, getUserCollection } from './utils/database';
 
+dotenv.config();
+
+if (!process.env.SUPER_SECRET_API_KEY || !process.env.SUPER_SECRET_DB_USER) {
+  throw new Error('.env file not populated');
+}
+
+// Implement Sever Routing
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
 const port = 3001;
 
-interface Query {
-  name?: string;
-  username?: string;
-  age?: number;
-}
-
-let users = [
-  {
-    _id: 0,
-    name: 'Dieter',
-    age: 34,
-    mail: 'awesomeDieter1337@gmail.com',
-    username: 'Dietonator',
-    password: '1234',
-  },
-  {
-    _id: 1,
-    name: 'Friedhelm',
-    age: 12,
-    mail: 'BigAndJuicy1234@gmail.com',
-    username: 'Historylover13',
-    password: '1234',
-  },
-  {
-    _id: 2,
-    name: 'Julius',
-    age: 70,
-    mail: 'etTuBrutus2021@gmail.com',
-    username: 'RealJuliusCaesar',
-    password: '1234',
-  },
-  {
-    _id: 3,
-    name: 'Engelbert',
-    age: 23,
-    mail: 'hellsAngel23@gmail.com',
-    username: 'Engels',
-    password: '1234',
-  },
-  {
-    _id: 4,
-    name: 'Grunhilde',
-    age: 99,
-    mail: 'awesomeHilda42@gmail.com',
-    username: 'OldButGold',
-    password: '1234',
-  },
-  {
-    _id: 5,
-    name: 'Waldtraut',
-    age: 67,
-    mail: 'Waldi420@gmail.com',
-    username: 'Forestdares',
-    password: '1234',
-  },
-];
-
 app.get('/api/logout', (req, res) => {
   if (!req.cookies.username) {
     res.send('Already logged out!');
-  } else {
-    const username = req.cookies.username;
-    res.setHeader('Set-Cookie', `username=`);
-    console.log(req.cookies);
-    res.send(`Goodbye ${username}`);
+    return;
   }
+  const { username } = req.cookies;
+  res.setHeader('Set-Cookie', `username=`);
+  console.log(req.cookies);
+  res.send(`Goodbye ${username}`);
 });
 
-app.get('/api/me', (req, res) => {
-  const cookies = req.cookies;
-  const currenUser = users.find((user) => user.username === cookies.username);
-  if (currenUser) {
-    res.send(currenUser);
-  } else {
-    res.status(404).send('Nobody is logged in!');
-  }
+app.get('/api/me', async (req, res) => {
+  const { username } = req.cookies;
+  const userCollection = getUserCollection();
+
+  const currentUser = await userCollection.findOne({
+    username: username,
+  });
+
+  currentUser
+    ? res.send(currentUser)
+    : res.status(404).send('Nobody is logged in!');
 });
 
-app.post('/api/login', (req, res) => {
-  const userLogin = req.body;
+app.post('/api/login', async (req, res) => {
+  const { username, password } = req.body;
 
-  const foundUser = users.find(
-    (user) =>
-      user.username === userLogin.username &&
-      user.password === userLogin.password
-  );
-  if (foundUser) {
-    res
-      .setHeader('Set-Cookie', `username=${foundUser.username}`)
-      .send(`Herzlich Willkommen ${foundUser.name}`);
-  } else {
-    res.status(403).send('Ooops, wrong username or password.');
-  }
+  const userCollection = getUserCollection();
+
+  const foundUser = await userCollection.findOne({
+    username: username,
+    password: password,
+  });
+
+  foundUser
+    ? res
+        .setHeader('Set-Cookie', `username=${foundUser.username}`)
+        .send(`Herzlich Willkommen ${foundUser.name}`)
+    : res.status(403).send('Ooops, wrong username or password.');
 });
 
-app.post('/api/users/', (request, response) => {
-  // find matching users
+app.post('/api/users/', async (request, response) => {
   const { name, username, age, mail, password } = request.body;
 
   if (!(name && username && age && mail && password)) {
     response.status(400).send('Insufficient data to create a user.');
     return;
   }
+  const userCollection = getUserCollection();
 
-  const isAlreadyInDB = users.some(
-    (user) => user.mail === mail || user.username === username
-  );
-  if (isAlreadyInDB) {
-    response.status(409).send('This User is availalbe.');
+  const foundUser = await userCollection.find({ username: username }).toArray();
+
+  if (foundUser.length > 0) {
+    response.status(501).send('Username already in use.');
     return;
   }
 
   const newUser = {
-    _id: generateId(),
     name,
     age,
     mail,
@@ -127,68 +80,56 @@ app.post('/api/users/', (request, response) => {
     password,
   };
 
-  users = [...users, newUser];
+  userCollection.insertOne(newUser);
 
   response.send(request.body);
 });
 
-app.delete('/api/users/', (request, response) => {
+app.delete('/api/users/', async (req, res) => {
   // find matching users
-  const foundUsers = filterUsers(request.query);
-  // get their ids
-  const foundUserIds = foundUsers.map((user) => user._id);
-  // remove user if id is in the found Users IDs
-  users = users.filter((user) => !foundUserIds.includes(user._id));
-  // send a response
-  response.send(`Deleted user IDs: ${foundUserIds}`);
+  const { username } = req.query;
+
+  const userCollection = getUserCollection();
+
+  userCollection.deleteOne({ username: username });
+  res.send(`Success`);
 });
 
-app.get('/api/users/', (request, response) => {
+app.get('/api/users/', async (req, res) => {
   // filter the users for all possible queries, if specified
-  const foundUsers = filterUsersFlex(request.query);
+  const { name, username, age } = req.query;
+
+  const userCollection = getUserCollection();
+
+  const foundUsers = await userCollection
+    .find({
+      $or: [{ username: username }, { name: name }, { age: Number(age) }],
+    })
+    .toArray();
 
   foundUsers.length !== 0
-    ? response.send(foundUsers)
-    : response.status(404).send('No matching user found.');
+    ? res.send(foundUsers)
+    : res.status(404).send('No matching user found.');
 });
-app.get('/api/users/all', (_request, response) => {
+app.get('/api/users/all', async (_request, response) => {
   // filter the users for all possible queries, if specified
-  response.send(users);
+  const userCollection = getUserCollection();
+
+  const allUsers = await userCollection.find().toArray();
+  response.send(allUsers);
 });
 app.get('/', (_req, res) => {
   res.send('Hello World!');
 });
 
-app.listen(port, () => {
-  console.log(`Example app listening at http://localhost:${port}`);
+// ###########################################
+// start connection with database and start server
+// ###########################################
+
+connectDatabase(
+  `mongodb+srv://${process.env.SUPER_SECRET_DB_USER}:${process.env.SUPER_SECRET_API_KEY}@pier1.vjjm9.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`
+).then(() => {
+  app.listen(port, () => {
+    console.log(`Example app listening at http://localhost:${port}`);
+  });
 });
-
-function filterUsers(query: Query) {
-  const { name, username, age: ageStr } = query;
-
-  const age = Number(ageStr);
-  return users.filter(
-    (user) =>
-      (name || age || username) &&
-      (!name || user.name.toLowerCase() === name) &&
-      (!age || user.age === age) &&
-      (!username || user.username.toLowerCase() === username)
-  );
-}
-
-function filterUsersFlex(query: Query) {
-  const { name, username, age: ageStr } = query;
-
-  const age = Number(ageStr);
-  return users.filter(
-    (user) =>
-      (name || age || username) &&
-      (!name || user.name.toLowerCase().includes(name)) &&
-      (!age || user.age === age) &&
-      (!username || user.username.toLowerCase().includes(username))
-  );
-}
-
-function generateId() {
-  return new Date().getTime();
-}
