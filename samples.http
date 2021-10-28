@@ -2,22 +2,16 @@
 GET http://localhost:3001/api/users/all
 
 ### GET Dieter!
-GET http://localhost:3001/api/users/?name=dieter
-
-
-### GET Flexie Condition!
-GET http://localhost:3001/api/users/?name=ie
-
-
-
+GET http://localhost:3001/api/users/?name=Dieter
 ### GET Dieter!
-GET http://localhost:3001/api/users/?username=o
-
+GET http://localhost:3001/api/users/?username=Dietonator
+### GET Dieter!
+GET http://localhost:3001/api/users/?age=34
 
 
 
 ### DELETE a user
-DELETE http://localhost:3001/api/users/?name=dieter
+DELETE http://localhost:3001/api/users/?username=Dietonator
 
 
 ### POST Create a user
@@ -25,10 +19,10 @@ POST http://localhost:3001/api/users
 Content-Type: application/json
 
 {
-  "name": "Vonnegurt",
-  "username": "Schlachter Nr. 5",
-  "age": 10,
-  "mail": "anonymous@www.de",
+  "name": "Dieter",
+  "username": "Dietonator",
+  "age": 34,
+  "mail": "awesomedieter1337@www.de",
   "password": "1234"
 }
 
